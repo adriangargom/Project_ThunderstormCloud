@@ -1,0 +1,61 @@
+version: '3'
+
+services:
+
+  # MongoDB Database Service
+  database:
+    image: mongo:jammy
+    ports:
+      - 27018:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=db_user
+      - MONGO_INITDB_ROOT_PASSWORD=db_password
+    volumes:
+      - db:/data/db
+    networks:
+      - app-network
+
+  # Express Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dockerfile
+    ports:
+      - 3000:3000
+    environment:
+      BUILD_VERSION: production
+      DB_USERNAME: db_user
+      DB_PASSWORD: db_password
+      DB_PORT: 27017
+      MAIN_DIRECTORY_PATH: ./user_dir
+    depends_on:
+      - database
+    networks:
+      - app-network
+
+  # Nginx and React frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    ports:
+      - 8080:80
+    depends_on:
+      - backend
+      - database
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "false"
+
+volumes:
+  db:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./database/mongo_data
